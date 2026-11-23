@@ -1,9 +1,10 @@
 [general]
 name=Filter Focus
-qgisMinimumVersion=3.22
+qgisMinimumVersion=3.0
+qgisMaximumVersion=4.99
 description=Filter multiple layers by the selected feature of a reference layer and zoom to it.
 about=Filter Focus turns a set of related layers into a sequential navigation. Pick a reference layer and a relationship field, choose the target layers (each with its own matching field), and every time you select one or more features in the reference layer the plugin applies a subset filter to all targets and centers the map on the selection. A built-in panel lets you step through features (Previous/Next, searchable list) and shows the attributes you choose. Original layer filters are preserved and restored when you stop. Optionally exports a local Shapefile copy of the reference layer so it can be filtered too.
-version=0.1.0
+version=1.0.0
 author=Luiz Gomes
 email=luizgmg@gmail.com
 homepage=https://github.com/luizgmg/filter_focus
@@ -11,6 +12,6 @@ tracker=https://github.com/luizgmg/filter_focus/issues
 repository=https://github.com/luizgmg/filter_focus
 tags=filter,multilayer,selection,zoom,navigation,attribute table,subset
 icon=icon.svg
-experimental=True
+experimental=False
 deprecated=False
-changelog=0.1.0 - Initial release: multi-layer subset filtering driven by the reference layer selection, automatic zoom, navigation panel with selectable attribute fields, optional Shapefile copy of the reference layer.
+changelog=1.0.0 - First release: multi-layer subset filtering driven by the reference layer selection, automatic zoom, navigation panel (ordered like the attribute table) with selectable attribute fields, optional Shapefile copy of the reference layer. English and Brazilian Portuguese interface.

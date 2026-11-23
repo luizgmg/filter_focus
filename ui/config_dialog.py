@@ -2,7 +2,6 @@
 """Diálogo de configuração: referência, campo, árvore de destinos e cópia SHP."""
 import os
 
-from qgis.PyQt.QtCore import Qt
 from qgis.PyQt.QtGui import QFont
 from qgis.PyQt.QtWidgets import (QCheckBox, QComboBox, QDialog, QDialogButtonBox,
                                  QFileDialog, QFormLayout, QGroupBox, QHBoxLayout,
@@ -10,10 +9,12 @@ from qgis.PyQt.QtWidgets import (QCheckBox, QComboBox, QDialog, QDialogButtonBox
                                  QMessageBox, QPushButton,
                                  QTreeWidget, QTreeWidgetItem, QVBoxLayout)
 from qgis.core import QgsLayerTree, QgsProject, QgsVectorLayer
+from ..compat import (BTN_CANCEL, BTN_OK, CHECKED, ITEM_CHECKABLE, ITEM_ENABLED,
+                      ITEM_SELECTABLE, ITEM_TRISTATE, MATCH_FIXED, UNCHECKED)
 from ..i18n import tr
 
-_FLAGS_LAYER = Qt.ItemIsEnabled | Qt.ItemIsUserCheckable | Qt.ItemIsSelectable
-_FLAGS_GROUP = Qt.ItemIsEnabled | Qt.ItemIsUserCheckable | Qt.ItemIsAutoTristate
+_FLAGS_LAYER = ITEM_ENABLED | ITEM_CHECKABLE | ITEM_SELECTABLE
+_FLAGS_GROUP = ITEM_ENABLED | ITEM_CHECKABLE | ITEM_TRISTATE
 
 
 class ConfigDialog(QDialog):
@@ -75,7 +76,7 @@ class ConfigDialog(QDialog):
         gl.addLayout(btn_row)
         root.addWidget(grp)
 
-        bb = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        bb = QDialogButtonBox(BTN_OK | BTN_CANCEL)
         bb.accepted.connect(self._try_accept)
         bb.rejected.connect(self.reject)
         root.addWidget(bb)
@@ -90,7 +91,7 @@ class ConfigDialog(QDialog):
             if QgsLayerTree.isGroup(child):
                 it = QTreeWidgetItem(parent_item, [child.name(), ""])
                 it.setFlags(_FLAGS_GROUP)
-                it.setCheckState(0, Qt.Unchecked)
+                it.setCheckState(0, UNCHECKED)
                 self._add_nodes(it, child)
             elif QgsLayerTree.isLayer(child):
                 lyr = child.layer()
@@ -98,7 +99,7 @@ class ConfigDialog(QDialog):
                     continue
                 it = QTreeWidgetItem(parent_item, [lyr.name(), ""])
                 it.setFlags(_FLAGS_LAYER)
-                it.setCheckState(0, Qt.Unchecked)
+                it.setCheckState(0, UNCHECKED)
                 combo = QComboBox()
                 combo.addItem("")
                 combo.addItems(lyr.fields().names())
@@ -115,7 +116,7 @@ class ConfigDialog(QDialog):
         if lyr is not None:
             self.field_combo.addItems(lyr.fields().names())
             for guess in ("recibo", "cod_imovel"):
-                i = self.field_combo.findText(guess, Qt.MatchFixedString)
+                i = self.field_combo.findText(guess, MATCH_FIXED)
                 if i >= 0:
                     self.field_combo.setCurrentIndex(i)
                     break
@@ -129,20 +130,20 @@ class ConfigDialog(QDialog):
 
     def _fill_panel_fields(self, lyr):
         keep = {self.fields_list.item(i).text() for i in range(self.fields_list.count())
-                if self.fields_list.item(i).checkState() == Qt.Checked}
+                if self.fields_list.item(i).checkState() == CHECKED}
         self.fields_list.clear()
         names = lyr.fields().names() if lyr is not None else []
         rel = self.field_combo.currentText()
         marked = (keep & set(names)) or ({rel} if rel else set())
         for n in names:
             it = QListWidgetItem(n)
-            it.setFlags(Qt.ItemIsEnabled | Qt.ItemIsUserCheckable)
-            it.setCheckState(Qt.Checked if n in marked else Qt.Unchecked)
+            it.setFlags(ITEM_ENABLED | ITEM_CHECKABLE)
+            it.setCheckState(CHECKED if n in marked else UNCHECKED)
             self.fields_list.addItem(it)
 
     def _check_all_fields(self, state):
         for i in range(self.fields_list.count()):
-            self.fields_list.item(i).setCheckState(Qt.Checked if state else Qt.Unchecked)
+            self.fields_list.item(i).setCheckState(CHECKED if state else UNCHECKED)
 
     def _update_defaults(self):
         ref_id, field = self._ref_id(), self.field_combo.currentText()
@@ -150,8 +151,8 @@ class ConfigDialog(QDialog):
             lyr = self._vec[lid]
             font = QFont(it.font(0))
             if lid == ref_id:
-                it.setCheckState(0, Qt.Unchecked)
-                it.setFlags(Qt.ItemIsEnabled)
+                it.setCheckState(0, UNCHECKED)
+                it.setFlags(ITEM_ENABLED)
                 it.setText(0, lyr.name() + tr("  (reference)"))
                 font.setBold(True)
                 combo.setCurrentIndex(0)
@@ -180,7 +181,7 @@ class ConfigDialog(QDialog):
         ref_id = self._ref_id()
         targets = {}
         for lid, (it, combo) in self._items.items():
-            if lid != ref_id and it.checkState(0) == Qt.Checked:
+            if lid != ref_id and it.checkState(0) == CHECKED:
                 targets[lid] = combo.currentText()
         return {
             "ref_id": ref_id,
@@ -189,7 +190,7 @@ class ConfigDialog(QDialog):
             "copy_path": self.path_edit.text().strip() if self.grp_copy.isChecked() else None,
             "panel_fields": [self.fields_list.item(i).text()
                              for i in range(self.fields_list.count())
-                             if self.fields_list.item(i).checkState() == Qt.Checked],
+                             if self.fields_list.item(i).checkState() == CHECKED],
         }
 
     def _try_accept(self):

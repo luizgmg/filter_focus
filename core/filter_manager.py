@@ -25,6 +25,13 @@ def _literal(value, numeric):
     return "'" + str(value).replace("'", "''") + "'"
 
 
+def _is_numeric(field):
+    try:
+        return field.isNumeric()
+    except AttributeError:                      # QGIS antigo: tipos int/uint/longlong/ulonglong/double
+        return int(field.type()) in (2, 3, 4, 5, 6)
+
+
 def build_expression(field_name, values, numeric=False):
     """Expressão para um ou mais valores. Retorna None se não houver valores."""
     nulls = any(_is_null(v) for v in values)
@@ -108,7 +115,7 @@ class FilterManager:
             if idx < 0:
                 self.failed.add(lid)
                 continue
-            expr = build_expression(field, values, lyr.fields().at(idx).isNumeric())
+            expr = build_expression(field, values, _is_numeric(lyr.fields().at(idx)))
             orig = self._originals.get(lid, "")
             subset = "({}) AND {}".format(orig, expr) if orig else expr
             if self._applied.get(lid) == subset:

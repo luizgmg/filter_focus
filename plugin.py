@@ -2,11 +2,12 @@
 """Orquestra o ciclo de vida: configurar -> filtrar/centralizar a cada seleção -> restaurar."""
 import os
 
-from qgis.PyQt.QtCore import Qt
 from qgis.PyQt.QtGui import QIcon
-from qgis.PyQt.QtWidgets import QAction, QMessageBox
-from qgis.core import Qgis, QgsProject
+from qgis.PyQt.QtWidgets import QMessageBox
+from qgis.core import QgsProject
 
+from .compat import (DOCK_RIGHT, LEVEL_CRITICAL, LEVEL_INFO, LEVEL_SUCCESS, LEVEL_WARNING,
+                     QAction, exec_dialog)
 from .core.filter_manager import FilterManager
 from .core.map_focus import focus
 from .core.ref_copy import copy_field_name, export_reference
@@ -51,11 +52,11 @@ class FilterFocus:
         if self.active:
             return
         dlg = ConfigDialog(self.iface, self.iface.mainWindow())
-        if dlg.exec_() and self.start(dlg.config()):
+        if exec_dialog(dlg) and self.start(dlg.config()):
             return
         self.action.setChecked(False)
 
-    def _msg(self, text, level=Qgis.Info, duration=6):
+    def _msg(self, text, level=LEVEL_INFO, duration=6):
         self.iface.messageBar().pushMessage(TITLE, text, level=level, duration=duration)
 
     def start(self, cfg):
@@ -66,17 +67,17 @@ class FilterFocus:
         if cfg["copy_path"]:
             copy, msg, long_names = export_reference(ref, cfg["copy_path"])
             if copy is None:
-                self._msg(msg, Qgis.Critical, 10)
+                self._msg(msg, LEVEL_CRITICAL, 10)
                 return False
             cf = copy_field_name(cfg["ref_field"], copy)
             if cf is None:
-                self._msg(tr("The copy does not have the field '{}'.").format(cfg["ref_field"]), Qgis.Critical, 10)
+                self._msg(tr("The copy does not have the field '{}'.").format(cfg["ref_field"]), LEVEL_CRITICAL, 10)
                 return False
             targets[copy.id()] = cf
-            self._msg(msg, Qgis.Success)
+            self._msg(msg, LEVEL_SUCCESS)
             if long_names:
                 self._msg(tr("Fields longer than 10 characters were truncated in the Shapefile: {}").format(
-                    ", ".join(long_names)), Qgis.Warning, 10)
+                    ", ".join(long_names)), LEVEL_WARNING, 10)
 
         fm = FilterManager(targets)
         errors = fm.validate()
@@ -85,7 +86,7 @@ class FilterFocus:
             return False
         fm.snapshot()
         for note in fm.notes:
-            self._msg(note, Qgis.Warning, 10)
+            self._msg(note, LEVEL_WARNING, 10)
 
         self.ref, self.field, self.fm = ref, cfg["ref_field"], fm
         self._warned.clear()
@@ -98,7 +99,7 @@ class FilterFocus:
 
         self.panel = NavPanel(ref, cfg["ref_field"], cfg["panel_fields"], self.iface.mainWindow())
         self.panel.stopRequested.connect(self.stop)
-        self.iface.addDockWidget(Qt.RightDockWidgetArea, self.panel)
+        self.iface.addDockWidget(DOCK_RIGHT, self.panel)
 
         if ref.selectedFeatureCount():
             self._on_selection()
@@ -117,7 +118,7 @@ class FilterFocus:
             names = [QgsProject.instance().mapLayer(l).name() for l in new_fail
                      if QgsProject.instance().mapLayer(l)]
             self._msg(tr("Could not filter (layer in edit mode or unsupported source): ")
-                      + ", ".join(names), Qgis.Warning, 10)
+                      + ", ".join(names), LEVEL_WARNING, 10)
             self._warned |= new_fail
         if self.panel is not None:
             self.panel.sync_from_selection()
@@ -144,10 +145,11 @@ class FilterFocus:
             self.fm.restore()        # a cópia da referência NÃO é removida
             self.fm = None
         if self.panel is not None:
+            self.panel.dispose()
             self.panel.close()
             self.panel.deleteLater()
             self.panel = None
         self.ref = None
         if self.action is not None:
             self.action.setChecked(False)
-        self._msg(tr("Filters restored."), Qgis.Info, 4)
+        self._msg(tr("Filters restored."), LEVEL_INFO, 4)

@@ -43,10 +43,13 @@ def focus(canvas, layer):
         return False
     dest_crs = canvas.mapSettings().destinationCrs()
     if layer.crs() != dest_crs:
-        tr = QgsCoordinateTransform(layer.crs(), dest_crs, QgsProject.instance())
+        tr = QgsCoordinateTransform(layer.crs(), dest_crs, QgsProject.instance().transformContext())
         rect = tr.transformBoundingBox(rect)
     rect = _enforce_min_size(rect, dest_crs.isGeographic())
     rect.scale(BUFFER_FACTOR)
-    canvas.setExtent(rect, True)   # True: respeita a proporção da tela
+    try:
+        canvas.setExtent(rect, True)   # True: respeita a proporção da tela
+    except TypeError:                  # QGIS antigo sem o parâmetro 'magnified'
+        canvas.setExtent(rect)
     canvas.refresh()
     return True

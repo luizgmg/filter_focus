@@ -1,11 +1,13 @@
 # -*- coding: utf-8 -*-
 """Painel próprio (sempre aberto): navegação + informações dos campos escolhidos."""
-from qgis.PyQt.QtCore import Qt, pyqtSignal
-from qgis.PyQt.QtWidgets import (QAbstractItemView, QComboBox, QCompleter, QHBoxLayout,
+from qgis.PyQt.QtCore import QTimer, pyqtSignal
+from qgis.PyQt.QtWidgets import (QComboBox, QHBoxLayout,
                                  QLabel, QPushButton, QTableWidget, QTableWidgetItem,
                                  QVBoxLayout, QWidget)
 from qgis.core import NULL, QgsFeatureRequest
 from qgis.gui import QgsDockWidget
+from ..compat import (ASC, FLAG_NO_GEOM, ISO_DATE, MATCH_CONTAINS, NO_EDIT,
+                      NO_INSERT, POPUP)
 from ..i18n import tr
 
 MAX_ROWS = 200   # limite de linhas no modo de várias feições
@@ -15,7 +17,7 @@ def _fmt(val):
     if val is None or val == NULL:
         return ""
     if hasattr(val, "toString"):          # QDate / QDateTime / QTime
-        return val.toString(Qt.ISODate)
+        return val.toString(ISO_DATE)
     return str(val)
 
 
@@ -36,9 +38,9 @@ class NavPanel(QgsDockWidget):
 
         self.combo = QComboBox()
         self.combo.setEditable(True)
-        self.combo.setInsertPolicy(QComboBox.NoInsert)
-        self.combo.completer().setFilterMode(Qt.MatchContains)
-        self.combo.completer().setCompletionMode(QCompleter.PopupCompletion)
+        self.combo.setInsertPolicy(NO_INSERT)
+        self.combo.completer().setFilterMode(MATCH_CONTAINS)
+        self.combo.completer().setCompletionMode(POPUP)
         self.combo.activated.connect(self._select)
         lay.addWidget(self.combo)
 
@@ -55,7 +57,7 @@ class NavPanel(QgsDockWidget):
         lay.addWidget(self.lbl)
 
         self.info = QTableWidget()
-        self.info.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self.info.setEditTriggers(NO_EDIT)
         self.info.setAlternatingRowColors(True)
         lay.addWidget(self.info, 1)
 
@@ -64,18 +66,40 @@ class NavPanel(QgsDockWidget):
         lay.addWidget(btn_stop)
         self.setWidget(body)
 
+        self._sort_key = None
+        self._reload_timer = QTimer(self)
+        self._reload_timer.setSingleShot(True)
+        self._reload_timer.setInterval(150)
+        self._reload_timer.timeout.connect(self._on_table_config_changed)
+        try:   # a ordenação da tabela de atributos é gravada na configuração da camada
+            self.layer.attributeTableConfigChanged.connect(self._reload_timer.start)
+        except (AttributeError, TypeError):
+            pass
+
+        self.reload()
+        self.sync_from_selection()
+
+    def dispose(self):
+        self._reload_timer.stop()
+        try:
+            self.layer.attributeTableConfigChanged.disconnect(self._reload_timer.start)
+        except (AttributeError, TypeError, RuntimeError):
+            pass
+
+    def _on_table_config_changed(self):
+        cfg = self.layer.attributeTableConfig()
+        if (cfg.sortExpression(), cfg.sortOrder()) == self._sort_key:
+            return                      # mudou outra coisa (largura de coluna etc.)
         self.reload()
         self.sync_from_selection()
 
     # ---------- lista de valores ----------
     def reload(self):
-        req = QgsFeatureRequest().setFlags(QgsFeatureRequest.NoGeometry)
-        req.setSubsetOfAttributes([self.field], self.layer.fields())
-        items = []
-        for feat in self.layer.getFeatures(req):
-            val = feat[self.field]
-            items.append((tr("(empty)") if val is None or val == NULL else str(val), feat.id()))
-        items.sort(key=lambda t: t[0])
+        """Carrega os valores na MESMA ordem da tabela de atributos da camada."""
+        cfg = self.layer.attributeTableConfig()
+        expr, order = cfg.sortExpression(), cfg.sortOrder()
+        self._sort_key = (expr, order)
+        items = self._load_items(expr, order == ASC) if expr else self._load_items(None, True)
         self.combo.blockSignals(True)
         self.combo.clear()
         self._fid_to_index = {}
@@ -84,6 +108,21 @@ class NavPanel(QgsDockWidget):
             self._fid_to_index[fid] = i
         self.combo.setCurrentIndex(-1)
         self.combo.blockSignals(False)
+
+    def _load_items(self, sort_expr, ascending):
+        req = QgsFeatureRequest().setFlags(FLAG_NO_GEOM)
+        if sort_expr:
+            req.setOrderBy(QgsFeatureRequest.OrderBy(
+                [QgsFeatureRequest.OrderByClause(sort_expr, ascending)]))
+        else:   # sem ordenação na tabela: ordem natural da fonte, como a tabela mostra
+            req.setSubsetOfAttributes([self.field], self.layer.fields())
+        items = []
+        for feat in self.layer.getFeatures(req):
+            val = feat[self.field]
+            items.append((tr("(empty)") if val is None or val == NULL else str(val), feat.id()))
+        if not items and sort_expr:     # expressão inválida: cai para a ordem natural
+            return self._load_items(None, True)
+        return items
 
     def _select(self, index):
         if index < 0:
@@ -121,7 +160,7 @@ class NavPanel(QgsDockWidget):
             self.info.setRowCount(0)
             self.info.setColumnCount(0)
             return
-        req = QgsFeatureRequest().setFilterFids(ids[:MAX_ROWS]).setFlags(QgsFeatureRequest.NoGeometry)
+        req = QgsFeatureRequest().setFilterFids(ids[:MAX_ROWS]).setFlags(FLAG_NO_GEOM)
         feats = list(self.layer.getFeatures(req))
         labels = [self.layer.attributeDisplayName(self.layer.fields().indexFromName(f))
                   for f in fields]
