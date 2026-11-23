@@ -2,8 +2,8 @@
 name=Filter Focus
 qgisMinimumVersion=3.0
 qgisMaximumVersion=4.99
-description=Filter multiple layers by the selected feature of a reference layer and zoom to it.
-about=Filter Focus turns a set of related layers into a sequential navigation. Pick a reference layer and a relationship field, choose the target layers (each with its own matching field), and every time you select one or more features in the reference layer the plugin applies a subset filter to all targets and centers the map on the selection. A built-in panel lets you step through features (Previous/Next, searchable list) and shows the attributes you choose. Original layer filters are preserved and restored when you stop. Optionally exports a local Shapefile copy of the reference layer so it can be filtered too.
+description=Filter several layers by the feature(s) selected in a reference layer, with automatic zoom and a navigation panel.
+about=Filter Focus turns a set of related layers into a sequential navigation: pick a reference layer and a relationship field, choose the target layers (each with its own matching field), and every time you select one or more features in the reference layer the plugin filters all target layers to the related records and zooms to the selection. How it differs from similar plugins: tools such as Multifilter or Multi Layer Filter Toolbar apply one common filter expression to many layers, and Filter By Selection filters a single layer by the selection in another one. Filter Focus filters MANY layers at once from the feature selected in a reference layer (the value comes from the selection, not from a typed expression), supports a different relationship field per layer, keeps the reference layer unfiltered, and does the zoom in the same step. A built-in panel lets you step through the reference features (Previous/Next, searchable list, ordered like the attribute table) and shows the attributes you choose. Original layer filters are preserved and restored when you stop. Optionally exports a local Shapefile copy of the reference layer so it can be filtered too.
 version=1.0.0
 author=Luiz Gomes
 email=luizgmg@gmail.com
