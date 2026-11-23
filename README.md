@@ -3,7 +3,7 @@
 Filter multiple layers by the selected feature of a reference layer and zoom to it.
 
 ## What it does
-1. Pick a **reference layer** and a **relationship field** (e.g. `cod_imovel`).
+1. Pick a **reference layer** and a **relationship field**.
 2. Pick the **target layers** (tree like the Layers panel; each layer has its own matching field).
 3. Select one or more features in the reference layer. The plugin, in a single step:
    - applies a subset filter to every target layer (`"field" = 'value'`, or `IN (...)` for multiple selection);
