@@ -3,7 +3,7 @@
 import os
 
 from qgis.PyQt.QtGui import QFont
-from qgis.PyQt.QtWidgets import (QCheckBox, QComboBox, QDialog, QDialogButtonBox,
+from qgis.PyQt.QtWidgets import (QComboBox, QDialog, QDialogButtonBox,
                                  QFileDialog, QFormLayout, QGroupBox, QHBoxLayout,
                                  QLabel, QLineEdit, QListWidget, QListWidgetItem,
                                  QMessageBox, QPushButton,
@@ -23,7 +23,8 @@ class ConfigDialog(QDialog):
         self.setWindowTitle(tr("Filter Focus — settings"))
         self.resize(680, 700)
         prj = QgsProject.instance()
-        self._vec = {l.id(): l for l in prj.mapLayers().values() if isinstance(l, QgsVectorLayer)}
+        self._vec = {lyr.id(): lyr for lyr in prj.mapLayers().values()
+                     if isinstance(lyr, QgsVectorLayer)}
         self._items = {}            # layer_id -> (item, combo)
         self._path_edited = False
 
