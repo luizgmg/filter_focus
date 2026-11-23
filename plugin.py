@@ -115,8 +115,8 @@ class FilterFocus:
             focus(self.iface.mapCanvas(), self.ref)
         new_fail = self.fm.failed - self._warned
         if new_fail:
-            names = [QgsProject.instance().mapLayer(l).name() for l in new_fail
-                     if QgsProject.instance().mapLayer(l)]
+            layers = [QgsProject.instance().mapLayer(lid) for lid in new_fail]
+            names = [lyr.name() for lyr in layers if lyr is not None]
             self._msg(tr("Could not filter (layer in edit mode or unsupported source): ")
                       + ", ".join(names), LEVEL_WARNING, 10)
             self._warned |= new_fail

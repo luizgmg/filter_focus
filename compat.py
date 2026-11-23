@@ -5,9 +5,9 @@ from qgis.PyQt.QtWidgets import QAbstractItemView, QComboBox, QCompleter, QDialo
 from qgis.core import Qgis, QgsFeatureRequest, QgsVectorFileWriter
 
 try:                                   # Qt6: QAction fica em QtGui
-    from qgis.PyQt.QtGui import QAction
+    from qgis.PyQt.QtGui import QAction  # noqa: F401
 except ImportError:                    # Qt5: QAction fica em QtWidgets
-    from qgis.PyQt.QtWidgets import QAction
+    from qgis.PyQt.QtWidgets import QAction  # noqa: F401
 
 
 def _enum(owner, scope, name):
@@ -45,5 +45,6 @@ WRITE_OK = _enum(QgsVectorFileWriter, "WriterError", "NoError")
 
 
 def exec_dialog(dlg):
-    """exec_() no PyQt5, exec() no PyQt6."""
-    return dlg.exec() if hasattr(dlg, "exec") else dlg.exec_()
+    """exec() (PyQt6 e PyQt5 com Python 3); recorre ao nome antigo só se não existir."""
+    run = getattr(dlg, "exec", None) or getattr(dlg, "exec_")
+    return run()
